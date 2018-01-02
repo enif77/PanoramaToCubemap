@@ -15,6 +15,19 @@ namespace PanoramaToCubemap
     public static class BitmapHelper
     {
         /// <summary>
+        /// Saves a bitmap into a PNG file.
+        /// </summary>
+        /// <param name="fileName">A File name.</param>
+        /// <param name="bitmap">A Bitmap instance.</param>
+        /// <returns>True on success.</returns>
+        public static bool SaveBitmapAsPng(string fileName, Bitmap bitmap)
+        {
+            bitmap.Save(fileName, ImageFormat.Png);
+
+            return true;
+        }
+
+        /// <summary>
         /// Saves a bitmap into a JPEG file.
         /// </summary>
         /// <param name="fileName">A File name.</param>
@@ -34,7 +47,7 @@ namespace PanoramaToCubemap
             // objects. In this case, there is only one EncoderParameter object in the array.  
             var encoderParameters = new EncoderParameters(1);
 
-            encoderParameters.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, quality);
+            encoderParameters.Param[0] = new EncoderParameter(Encoder.Quality, quality);
 
             bitmap.Save(fileName, jpgEncoder, encoderParameters);
 

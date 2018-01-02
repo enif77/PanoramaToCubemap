@@ -7,7 +7,7 @@
     <ProjectGuid>{920D7DC4-988B-449D-AF13-0BA73CAE4CE9}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>PanoramaToCubemap</RootNamespace>
-    <AssemblyName>PanoramaToCubemap</AssemblyName>
+    <AssemblyName>ptc</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
