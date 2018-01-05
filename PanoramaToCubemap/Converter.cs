@@ -100,21 +100,16 @@ namespace PanoramaToCubemap
 
 
         private delegate void CopyPixelDelegate(ImageData read, ImageData write, double xFrom, double yFrom, int to);
+        private delegate double KernelDelegate(double x);
 
 
         private CopyPixelDelegate GetCopyPixelDelegate(string interpolation)
         {
-            //const copyPixel =
-            //  interpolation === 'linear' ? copyPixelBilinear(readData, writeData) :
-            //  interpolation === 'cubic' ? copyPixelBicubic(readData, writeData) :
-            //  interpolation === 'lanczos' ? copyPixelLanczos(readData, writeData) :
-            //  copyPixelNearest(readData, writeData);
-
             switch (interpolation)
             {
                 case "linear": return CopyPixelBilinear;
-                //case "cubic": return CopyPixelBilinear;
-                //case "lanczos": return CopyPixelBilinear;
+                case "cubic": return CopyPixelBicubic;
+                case "lanczos": return CopyPixelLanczos;
                 default: return CopyPixelNearest;
             }
         }
@@ -154,6 +149,100 @@ namespace PanoramaToCubemap
                 var p0 = read.Data[p00 + channel] * (1 - xf) + read.Data[p10 + channel] * xf;
                 var p1 = read.Data[p01 + channel] * (1 - xf) + read.Data[p11 + channel] * xf;
                 write.Data[to + channel] = (byte)Math.Ceiling(p0 * (1 - yf) + p1 * yf);
+            }
+        }
+
+
+        private void CopyPixelBicubic(ImageData read, ImageData write, double xFrom, double yFrom, int to)
+        {
+            KernelResample(read, write, xFrom, yFrom, to, 2, BicubicKernel);
+        }
+
+
+        private double BicubicKernel(double x)
+        {
+            var b = -0.5;
+            var x1 = Math.Abs(x);
+            var x2 = x1 * x1;
+            var x3 = x1 * x1 * x1;
+
+            return (x1 <= 1)
+                ? (b + 2) * x3 - (b + 3) * x2 + 1
+                : b * x3 - 5 * b * x2 + 8 * b * x1 - 4 * b;
+        }
+
+
+        private void CopyPixelLanczos(ImageData read, ImageData write, double xFrom, double yFrom, int to)
+        {
+            KernelResample(read, write, xFrom, yFrom, to, 5, LanczosKernel);
+        }
+
+
+        private double LanczosKernel(double x)
+        {
+            var filterSize = 5;
+            if (x == 0)
+            {
+                return 1;
+            }
+            else
+            {
+                var xp = Math.PI * x;
+
+                return filterSize * Math.Sin(xp) * Math.Sin(xp / filterSize) / (xp * xp);
+            }
+        }
+
+        /// <summary>
+        /// Performs a discrete convolution with a provided kernel.
+        /// </summary>
+        /// <param name="read"></param>
+        /// <param name="write"></param>
+        /// <param name="xFrom"></param>
+        /// <param name="yFrom"></param>
+        /// <param name="to"></param>
+        /// <param name="filterSize"></param>
+        /// <param name="kernel"></param>
+        private void KernelResample(ImageData read, ImageData write, double xFrom, double yFrom, int to, int filterSize, KernelDelegate kernel)
+        {
+            var twoFilterSize = 2 * filterSize;
+            var xMax = read.Width - 1;
+            var yMax = read.Height - 1;
+            var xKernel = new double[twoFilterSize];
+            var yKernel = new double[twoFilterSize];
+
+            var xl = Math.Floor(xFrom);
+            var yl = Math.Floor(yFrom);
+            var xStart = xl - filterSize + 1;
+            var yStart = yl - filterSize + 1;
+
+            for (var i = 0; i < twoFilterSize; i++)
+            {
+                xKernel[i] = kernel(xFrom - (xStart + i));
+                yKernel[i] = kernel(yFrom - (yStart + i));
+            }
+
+            for (var channel = 0; channel < 3; channel++)
+            {
+                var q = 0.0;
+
+                for (var i = 0; i < twoFilterSize; i++)
+                {
+                    var y = yStart + i;
+                    var yClamped = Clamp((int)y, 0, yMax);
+                    var p = 0.0;
+                    for (var j = 0; j < twoFilterSize; j++)
+                    {
+                        var x = xStart + j;
+                        var index = GetReadIndex(Clamp((int)x, 0, xMax), yClamped, read.Width);
+                        p += read.Data[index + channel] * xKernel[j];
+
+                    }
+
+                    q += p * yKernel[i];
+                }
+
+                write.Data[to + channel] = (byte)Math.Round(q);
             }
         }
 
