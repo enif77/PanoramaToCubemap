@@ -11,6 +11,7 @@ namespace PanoramaToCubemap
         private const string SourceArgName = "source=";
         private const string OutputDirectoryArgName = "output-directory=";
         private const string InterpolationArgName = "interpolation=";
+        private const string RotationArgName = "rotation=";
         private const string OutputFormatArgName = "output-format=";
         private const string JpegQualityArgName = "jpeg-quality=";
 
@@ -27,6 +28,7 @@ namespace PanoramaToCubemap
             var sourceFileName = (string)null;
             var outputDirectory = (string)null;
             var interpolation = "nearest";
+            var rotation = 0;
             var outputFormat = "jpeg";
             var jpegQuality = 100;
 
@@ -47,6 +49,23 @@ namespace PanoramaToCubemap
                     if (interpolation != "nearest" && interpolation != "linear" && interpolation != "cubic" && interpolation != "lanczos")
                     {
                         interpolation = "nearest";
+                    }
+                }
+                else if (arg.StartsWith(RotationArgName))
+                {
+                    if (int.TryParse(arg.Substring(RotationArgName.Length), out rotation) == false)
+                    {
+                        rotation = 0;
+                    }
+
+                    while (rotation < 0)
+                    {
+                        rotation += 360;
+                    }
+
+                    while (rotation >= 360)
+                    {
+                        rotation -= 360;
                     }
                 }
                 else if (arg.StartsWith(OutputFormatArgName))
@@ -73,6 +92,7 @@ namespace PanoramaToCubemap
             Console.WriteLine("  The source is: '{0}'", sourceFileName ?? "<NOT SET>");
             Console.WriteLine("  The output-directory is: '{0}'", outputDirectory ?? "<NOT SET>");
             Console.WriteLine("  The interpolation is: '{0}'", interpolation);
+            Console.WriteLine("  The rotation is: '{0}'", rotation);
             Console.WriteLine("  The output-format is: '{0}'", outputFormat);
             Console.WriteLine("  The jpeg-quality is: '{0}'", jpegQuality);
             Console.WriteLine();
@@ -112,7 +132,7 @@ namespace PanoramaToCubemap
                 {
                     Console.Write("  {0}: ", faceName);
 
-                    var faceImage = converter.RenderFace(image, faceName, 180.0f, interpolation, 4096);
+                    var faceImage = converter.RenderFace(image, faceName, rotation, interpolation, 4096);
 
                     using (var bitmap = BitmapHelper.GetBitmapFromRgba(faceImage))
                     {
@@ -148,7 +168,7 @@ namespace PanoramaToCubemap
 
         private static void Usage()
         {
-            Console.WriteLine("Usage: ptc.exe source=an-input-image.* output-directory=an-output-directory-path [interpolation=nearest|linear|cubic|lanczos] [output-format=jpeg|png] [jpeg-quality=100]");
+            Console.WriteLine("Usage: ptc.exe source=an-input-image.* output-directory=an-output-directory-path [interpolation=nearest|linear|cubic|lanczos] [rotation=0] [output-format=jpeg|png] [jpeg-quality=100]");
         }
     }
 }
