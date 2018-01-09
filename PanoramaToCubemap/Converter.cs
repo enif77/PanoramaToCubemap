@@ -1,4 +1,8 @@
-﻿/* (C) 2018 - Premysl Fara */
+﻿/* (C) 2018 - Premysl Fara 
+ 
+ https://github.com/jaxry/panorama-to-cubemap
+ 
+ */
 
 namespace PanoramaToCubemap
 {
@@ -81,7 +85,7 @@ namespace PanoramaToCubemap
         }
 
 
-        private int Clamp(int x, int min, int max)
+        private double Clamp(double x, double min, double max)
         {
             return Math.Min(max, Math.Max(x, min));
         }
@@ -118,8 +122,8 @@ namespace PanoramaToCubemap
         private void CopyPixelNearest(ImageData read, ImageData write, double xFrom, double yFrom, int to)
         {
             var nearest = GetReadIndex(
-                  Clamp((int)Math.Round(xFrom), 0, read.Width - 1),
-                  Clamp((int)Math.Round(yFrom), 0, read.Height - 1),
+                  (int)Clamp(Math.Round(xFrom), 0, read.Width - 1),
+                  (int)Clamp(Math.Round(yFrom), 0, read.Height - 1),
                   read.Width);
 
             for (var channel = 0; channel < 3; channel++)
@@ -131,24 +135,24 @@ namespace PanoramaToCubemap
 
         private void CopyPixelBilinear(ImageData read, ImageData write, double xFrom, double yFrom, int to)
         {
-            var xl = Clamp((int)Math.Floor(xFrom), 0, read.Width - 1);
-            var xr = Clamp((int)Math.Ceiling(xFrom), 0, read.Width - 1);
+            var xl = Clamp(Math.Floor(xFrom), 0, read.Width - 1);
+            var xr = Clamp(Math.Ceiling(xFrom), 0, read.Width - 1);
             var xf = xFrom - xl;
 
-            var yl = Clamp((int)Math.Floor(yFrom), 0, read.Height - 1);
-            var yr = Clamp((int)Math.Ceiling(yFrom), 0, read.Height - 1);
+            var yl = Clamp(Math.Floor(yFrom), 0, read.Height - 1);
+            var yr = Clamp(Math.Ceiling(yFrom), 0, read.Height - 1);
             var yf = yFrom - yl;
 
-            var p00 = GetReadIndex(xl, yl, read.Width);
-            var p10 = GetReadIndex(xr, yl, read.Width);
-            var p01 = GetReadIndex(xl, yr, read.Width);
-            var p11 = GetReadIndex(xr, yr, read.Width);
+            var p00 = GetReadIndex((int)xl, (int)yl, read.Width);
+            var p10 = GetReadIndex((int)xr, (int)yl, read.Width);
+            var p01 = GetReadIndex((int)xl, (int)yr, read.Width);
+            var p11 = GetReadIndex((int)xr, (int)yr, read.Width);
 
             for (var channel = 0; channel < 3; channel++)
             {
                 var p0 = read.Data[p00 + channel] * (1 - xf) + read.Data[p10 + channel] * xf;
                 var p1 = read.Data[p01 + channel] * (1 - xf) + read.Data[p11 + channel] * xf;
-                write.Data[to + channel] = (byte)Math.Ceiling(p0 * (1 - yf) + p1 * yf);
+                write.Data[to + channel] = (byte)Clamp(Math.Ceiling(p0 * (1 - yf) + p1 * yf), 0.0, 255.0);
             }
         }
 
@@ -166,9 +170,9 @@ namespace PanoramaToCubemap
             var x2 = x1 * x1;
             var x3 = x1 * x1 * x1;
 
-            return (x1 <= 1)
-                ? (b + 2) * x3 - (b + 3) * x2 + 1
-                : b * x3 - 5 * b * x2 + 8 * b * x1 - 4 * b;
+            return (x1 <= 1.0)
+                ? (b + 2.0) * x3 - (b + 3.0) * x2 + 1.0
+                : b * x3 - 5.0 * b * x2 + 8.0 * b * x1 - 4.0 * b;
         }
 
 
@@ -196,13 +200,13 @@ namespace PanoramaToCubemap
         /// <summary>
         /// Performs a discrete convolution with a provided kernel.
         /// </summary>
-        /// <param name="read"></param>
-        /// <param name="write"></param>
-        /// <param name="xFrom"></param>
-        /// <param name="yFrom"></param>
-        /// <param name="to"></param>
-        /// <param name="filterSize"></param>
-        /// <param name="kernel"></param>
+        /// <param name="read">The input image.</param>
+        /// <param name="write">The output image.</param>
+        /// <param name="xFrom">The source pixel X position.</param>
+        /// <param name="yFrom">The source pixel Y position.</param>
+        /// <param name="to">Target index in the output image.</param>
+        /// <param name="filterSize">The filter size.</param>
+        /// <param name="kernel">The kernel/filter function.</param>
         private void KernelResample(ImageData read, ImageData write, double xFrom, double yFrom, int to, int filterSize, KernelDelegate kernel)
         {
             var twoFilterSize = 2 * filterSize;
@@ -229,12 +233,12 @@ namespace PanoramaToCubemap
                 for (var i = 0; i < twoFilterSize; i++)
                 {
                     var y = yStart + i;
-                    var yClamped = Clamp((int)y, 0, yMax);
+                    var yClamped = Clamp(y, 0, yMax);
                     var p = 0.0;
                     for (var j = 0; j < twoFilterSize; j++)
                     {
                         var x = xStart + j;
-                        var index = GetReadIndex(Clamp((int)x, 0, xMax), yClamped, read.Width);
+                        var index = GetReadIndex((int)Clamp(x, 0, xMax), (int)yClamped, read.Width);
                         p += read.Data[index + channel] * xKernel[j];
 
                     }
@@ -242,10 +246,10 @@ namespace PanoramaToCubemap
                     q += p * yKernel[i];
                 }
 
-                write.Data[to + channel] = (byte)Math.Round(q);
+                write.Data[to + channel] = (byte)Clamp(Math.Round(q), 0.0, 255.0);
             }
         }
-
+        
 
         private delegate Vector3 CubeOrientationDelegate(double x, double y);
 
